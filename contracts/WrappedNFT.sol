@@ -53,15 +53,6 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
         return address(_baseNFT);
     }
 
-
-    // /**
-    //  * @dev Force buys an asset
-    //  */
-    // function _forceBuy(uint256 tokenId) public payable {      
-        
-    // }
-
-
     /**
      * @dev See {IERC721-transferFrom}.
      */
