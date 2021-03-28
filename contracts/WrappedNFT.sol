@@ -150,13 +150,13 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
     /**
      * @dev Mints a wrapped NFT
      */
-    function mint(uint256 tokenId)
+    function mint(uint256 tokenId, address to)
         public
         whenNotPaused
     {
         address sender = _msgSender();
         _baseNFT.transferFrom(sender, address(this), tokenId);
-        _mint(sender, tokenId);
+        _mint(to, tokenId);
 
         // TODO: Set initial price properly
         purchasePrice[tokenID] = 1 ether;
