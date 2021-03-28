@@ -19,7 +19,7 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
     mapping(uint256 => address[]) pastOwners;
 
     // Mapping from tokenID to last force buy price
-    mapping(uint256 => uint256) lastPrice;
+    mapping(uint256 => uint256) purchasePrice;
 
     // DAO Contract Address
     address daoAddress;
@@ -38,7 +38,7 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
         string(abi.encodePacked("Wrapped ", IERC721Metadata(baseNFT).name()));
     }
 
-    function _wrappedSymbol(address baseNFT) private pure return (strin memory) {
+    function _wrappedSymbol(address baseNFT) private pure returns (string memory) {
         string(abi.encodePacked("W", IERC721Metadata(baseNFT).symbol()));
     }
 
@@ -53,32 +53,59 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
         return address(_baseNFT);
     }
 
+
+    // /**
+    //  * @dev Force buys an asset
+    //  */
+    // function _forceBuy(uint256 tokenId) public payable {      
+        
+    // }
+
+
     /**
-     * @dev See {IERC721Metadata-tokenURI}.
+     * @dev See {IERC721-transferFrom}.
      */
-    function forceBuy(uint256 tokenId) public payable {        
-        require(_exists(tokenId), "Wrapped NFT: Attempted Force Buy of nonexistent NFT");
+    function transferFrom(address from, address to, uint256 tokenId) payable public virtual override {
+        //solhint-disable-next-line max-line-length
+        if (_isApprovedOrOwner(_msgSender(), tokenId)) {
+            _transfer(from, to, tokenId);
+        } else {
+            require(msg.value == purchasePrice[tokenId], "Wrapped NFT: Insufficent funds to force by NFT");
+            _forceBuy(tokenId, to);
+            _transfer(from, to, tokenId);
+        }
+    }
+    
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) payable public virtual override {
+        if (_isApprovedOrOwner(_msgSender(), tokenId)) {
+            _safeTransfer(from, to, tokenId, _data);    
+        } else {
+            require(msg.value == purchasePrice[tokenId], "Wrapped NFT: Insufficent funds to force by NFT");
+            _forceBuy(tokenId, to);
+            _safeTransfer(from, to, tokenId, _data);
+        }
+    }
 
-        // Require purchase price is 2x last sale price
-        uint256 purchasePrice = lastPrice[tokenId] * 2;
-        require(msg.value > purchasePrice, "Wrapped NFT: Insufficent funds to force by NFT");
-
-        // Refund any excess payment
-        payable(_msgSender()).transfer(msg.value - purchasePrice);
-
+    /**
+     * @dev Force buys an asset.  Handles all side-effects, EXCEPT the transfer of the NFT itself.
+     */
+    function _forceBuy(uint256 tokenId, address to) internal virtual {
         // counter to track remaining funds left to distribute
-        uint256 remainingFunds = purchasePrice;
+        uint256 remainingFunds = purchasePrice[tokenId];
 
         // Give portion of purchase amount to all past owners
         uint256 numPastOwners = pastOwners[tokenId].length;
-        uint256 fundsPerPastOwner = purchasePrice / 10 / numPastOwners; // TODO: Parameterize this
+        uint256 fundsPerPastOwner = purchasePrice[tokenId] / 10 / numPastOwners; // TODO: Parameterize this
         for (uint i = 0; i < numPastOwners; i++) {
             remainingFunds = remainingFunds - fundsPerPastOwner;
             payable(pastOwners[tokenId][i]).transfer(fundsPerPastOwner);
         }
 
         // Give portion of purchase amount to the dao
-        uint256 fundsToDao = purchasePrice / 10; // TODO: Parameterize this
+        uint256 fundsToDao = purchasePrice[tokenId] / 10; // TODO: Parameterize this
         remainingFunds = remainingFunds - fundsToDao;
         payable(daoAddress).transfer(fundsToDao);
 
@@ -89,11 +116,8 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
         // Add current owner to list of past owners
         pastOwners[tokenId].push(currentOwner); 
 
-        // Transfer NFT from current owner to force buyer
-        transferFrom(currentOwner, _msgSender(), tokenId);
-
-        // Update last sale price
-        lastPrice[tokenId] = purchasePrice;
+        // Update next purchase price
+        purchasePrice[tokenId] = purchasePrice[tokenId] * 2; // TODO: Parameterize?
 
         // TODO: Mint Dao Tokens
     }
@@ -144,16 +168,6 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
         // UserProxy proxy = UserProxy(_proxies[sender]);
         // require(proxy.transfer(address(_punkContract), punkIndex), "PunkWrapper: transfer fail");
     }
-
-    // /**
-    //  * @dev Internal function to transfer ownership of a given punk index to another address
-    //  */
-    // function _transferFrom(address from, address to, uint256 punkIndex)
-    //     internal
-    //     whenNotPaused
-    // {
-    //     super._transferFrom(from, to, punkIndex);
-    // }
 
     // TODO: Deal with Proxy stuff later
     //
