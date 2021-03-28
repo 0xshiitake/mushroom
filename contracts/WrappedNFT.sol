@@ -1,7 +1,7 @@
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+// import "./IERC721.sol";
+import "./ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
@@ -65,7 +65,7 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
     /**
      * @dev See {IERC721-transferFrom}.
      */
-    function transferFrom(address from, address to, uint256 tokenId) payable public virtual override {
+    function transferFrom(address from, address to, uint256 tokenId) payable public override {
         //solhint-disable-next-line max-line-length
         if (_isApprovedOrOwner(_msgSender(), tokenId)) {
             _transfer(from, to, tokenId);
@@ -79,7 +79,12 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) payable public virtual override {
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) payable public virtual override {
         if (_isApprovedOrOwner(_msgSender(), tokenId)) {
             _safeTransfer(from, to, tokenId, _data);    
         } else {
