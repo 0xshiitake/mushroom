@@ -167,7 +167,8 @@ contract WrappedNFT is Ownable, ERC721, Pausable {
         _baseNFT.transferFrom(sender, address(this), tokenId);
         _mint(sender, tokenId);
 
-
+        // TODO: Set initial price properly
+        purchasePrice[tokenID] = 1 ether;
 
         // TODO: Figure out proxy stuff later
         // UserProxy proxy = UserProxy(_proxies[sender]);
